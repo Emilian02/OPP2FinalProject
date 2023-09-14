@@ -21,6 +21,10 @@ public:
         }
     }
 
+    string getName() {
+        return name;
+    }
+
     void addItem(string item, int index) {
         inventory[index] = item;
     }
