@@ -30,7 +30,7 @@ public:
     }
 
     void displayInventory() {
-        cout << "Inventory of " << name << ":" << endl;
+        cout << "----------------- Inventory of " << name << ": -----------------" << endl;
         for (int i = 0; i < 13; ++i) {
             if (inventory[i] != "") {
                 cout << inventory[i] << endl;
@@ -44,7 +44,6 @@ public:
             return true;
         }
         else {
-            cout << "I don't have the item" << index << "." << std::endl;
             return false;
         }
     }
