@@ -11,7 +11,7 @@ using namespace std;
 class Players {
 private:
     string name;
-    int progress; // Use atomic to ensure thread safety
+    int progress; 
     string inventory[13]; 
 
 public:
@@ -29,11 +29,6 @@ public:
         }
     }
 
-    //Players(const Players& other) : name(other.name), progress(other.progress.load()) {
-    //    for (int i = 0; i < 13; ++i) {
-    //        inventory[i] = other.inventory[i];
-    //    }
-    //}
 
     ~Players() {};
 
@@ -49,7 +44,7 @@ public:
         cout << "----------------- Inventory of " << name << ": -----------------" << endl;
         for (int i = 0; i < 13; ++i) {
             if (inventory[i] != "") {
-                cout << inventory[i] << endl;
+                cout << "- " << inventory[i] << endl;
             }
         }
     }

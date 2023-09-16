@@ -22,13 +22,15 @@ void notifyPlayer() {
     while (!gameEnded) {
         this_thread::sleep_for(chrono::seconds(30)); // Adjust the update interval as needed
 
+        if (gameEnded) {
+            break;
+        }
+
         cout << endl << endl;
         for (int i = 1; i < 4; i++) {
             cout << setw(15) << left << playersData[i].getName() << " progress: "
                 << setw(7) << right << fixed << setprecision(2) << playersData[i].getProgress() << "%" << endl;
         }
-
-        
     }
 }
 
