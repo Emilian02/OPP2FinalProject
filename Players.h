@@ -11,7 +11,7 @@ using namespace std;
 class Players {
 private:
     string name;
-    atomic<int> progress; // Use atomic to ensure thread safety
+    int progress; // Use atomic to ensure thread safety
     string inventory[13]; 
 
 public:
@@ -29,12 +29,11 @@ public:
         }
     }
 
-    Players(const Players& other) : name(other.name), progress(other.progress.load()) {
-        // Copy inventory and any other member variables if needed
-        for (int i = 0; i < 13; ++i) {
-            inventory[i] = other.inventory[i];
-        }
-    }
+    //Players(const Players& other) : name(other.name), progress(other.progress.load()) {
+    //    for (int i = 0; i < 13; ++i) {
+    //        inventory[i] = other.inventory[i];
+    //    }
+    //}
 
     ~Players() {};
 

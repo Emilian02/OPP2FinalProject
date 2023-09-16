@@ -4,6 +4,8 @@
 #include <time.h>
 #include <mutex>
 #include <atomic>
+#include <random>
+#include <iomanip>
 #include "Players.h"
 
 using namespace std;
@@ -14,21 +16,38 @@ mutex gameMutex; // Mutex for protecting shared data
 
 vector<Players> playersData;
 
-void displayPlayerProgress(const Players& player) {
+
+// Function to notify players about progress
+void notifyPlayer() {
     while (!gameEnded) {
-        this_thread::sleep_for(chrono::seconds(20));
-        cout << endl << endl << endl;
-        cout << player.getName() << " progress: " << player.getProgress() << "%" << endl;
-        this_thread::sleep_for(chrono::seconds(20));
+        this_thread::sleep_for(chrono::seconds(30)); // Adjust the update interval as needed
+
+        cout << endl << endl;
+        for (int i = 1; i < 4; i++) {
+            cout << setw(15) << left << playersData[i].getName() << " progress: "
+                << setw(7) << right << fixed << setprecision(2) << playersData[i].getProgress() << "%" << endl;
+        }
+
+        
     }
 }
 
 // Function to simulate player progress independently
 void simulatePlayerProgress(Players& player) {
+    // Define a random number generator and distribution
+    random_device rd;
+    mt19937 gen(rd()); // Mersenne Twister random number engine
+    uniform_real_distribution<double> dis(1, 25); // Range [1, 25]
     while (!gameEnded) {
-        int increment = rand() % 24 + 1; // Random increment between 1 and 24
+        double increment = dis(gen);
         player.addProgress(increment); // Add the increment to the player's progress
-
+         // Update the progress in the vector playersData
+        for (Players& p : playersData) {
+            if (p.getName() == player.getName()) {
+                p.setProgress(player.getProgress());
+                break;
+            }
+        }
         this_thread::sleep_for(chrono::seconds(30));
     }
 }
@@ -65,8 +84,17 @@ void checkForWinner() {
     for (const Players& progress : playersData) {
         if (progress.getProgress() == 100) {
             cout << progress.getName() << " is the winner!" << endl;
+            // End the game properly
+            gameEnded = true;
             return; // Exit the function when a winner is found
         }
+    }
+}
+
+void checkForWinnerPeriodically() {
+    while (!gameEnded) {
+        checkForWinner();
+        this_thread::sleep_for(chrono::seconds(5)); 
     }
 }
 
@@ -91,6 +119,7 @@ void testing() {
     loadingPlayers(player4);
 
     //Having the progress of the other players
+    playersData.push_back(player1);
     playersData.push_back(player2);
     playersData.push_back(player3);
     playersData.push_back(player4);
@@ -102,10 +131,12 @@ void testing() {
     thread Player3Progress(simulatePlayerProgress, ref(player3));
     thread Player4Progress(simulatePlayerProgress, ref(player4));
 
-    // Creating threads to display player progress
-    thread Player2Display(displayPlayerProgress, ref(player2));
-    thread Player3Display(displayPlayerProgress, ref(player3));
-    thread Player4Display(displayPlayerProgress, ref(player4));
+    //Thread for notifying
+    thread notification(notifyPlayer);
+    
+    // Create a thread for checking the win condition
+    thread winnerThread(checkForWinnerPeriodically);
+    
 
     // Picking and using items
     int option;
@@ -155,39 +186,38 @@ void testing() {
         else if (option == 3) {
             if (player1.useItem(1)) {
                 cout << "You've escaped the dungeon" << endl << endl;
-
-                player1.setProgress(100); // Set progress to 100% when a player escapes
-                gameEnded = true; // Update the game state to end the game
+                playersData[0].setProgress(100);// Set progress to 100% when a player escapes
+                checkForWinner();
+                /*gameEnded = true;*/
                 break;
             }
             else {
                 cout << "The door is locked" << endl << endl;
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
             }
         }
         else {
             cout << "Invalid input" << endl << endl;
         }
 
-        checkForWinner();
 
-    } while (option != 0);
+    } while (!gameEnded);
 
-    // Check for a winner once after the game loop ends
-    checkForWinner();
 
     Player2Progress.join();
     Player3Progress.join();
     Player4Progress.join();
-    
-    Player2Display.join();
-    Player3Display.join();
-    Player4Display.join();
 
-    // End the game properly
-    gameEnded = true;
+    notification.join();
+
+    winnerThread.join();
+
+    cout << "The game has ended" << endl;
 
 
-    cout << "Game has ended" << endl;
 }
 
 int main() {
