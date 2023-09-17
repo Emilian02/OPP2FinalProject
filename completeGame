@@ -1,0 +1,574 @@
+#include <iostream>
+#include <thread>
+#include <chrono>
+#include <time.h>
+#include <mutex>
+#include <atomic>
+#include <random>
+#include <iomanip>
+#include "Players.h"
+
+using namespace std;
+
+atomic<bool> gameEnded(false); // To track the game state
+mutex gameMutex; // Mutex for protecting shared data
+
+
+vector<Players> playersData;
+
+
+// Function to notify players about progress
+void notifyPlayer() {
+    while (!gameEnded) {
+        this_thread::sleep_for(chrono::seconds(30)); // Adjust the update interval as needed
+
+        if (gameEnded) {
+            break;
+        }
+
+        cout << endl << endl;
+        for (int i = 1; i < 4; i++) {
+            cout << setw(15) << left << playersData[i].getName() << " progress: "
+                << setw(7) << right << fixed << setprecision(2) << playersData[i].getProgress() << "%" << endl;
+        }
+    }
+}
+
+// Function to simulate player progress independently
+void simulatePlayerProgress(Players& player) {
+    // Define a random number generator and distribution
+    random_device rd;
+    mt19937 gen(rd()); // Mersenne Twister random number engine
+    uniform_real_distribution<double> dis(1, 25); // Range [1, 25]
+    while (!gameEnded) {
+        double increment = dis(gen);
+        player.addProgress(increment); // Add the increment to the player's progress
+        // Update the progress in the vector playersData
+        for (Players& p : playersData) {
+            if (p.getName() == player.getName()) {
+                p.setProgress(player.getProgress());
+                break;
+            }
+        }
+        this_thread::sleep_for(chrono::seconds(30));
+    }
+}
+
+// Loading section
+void loadingPlayers(Players& player) {
+    int waitTime = rand() % 10 + 1;
+
+    cout << player.getName() << " has joined the lobby" << endl;
+
+    this_thread::sleep_for(chrono::seconds(waitTime));
+}
+
+void loadingGame() {
+    cout << "Loading game..." << std::endl;
+    this_thread::sleep_for(chrono::seconds(4));
+    cout << "Game loaded. Transitioning to gameplay..." << std::endl;
+}
+
+void startingGame() {
+    thread loadingThread(loadingGame);
+
+    loadingThread.join();
+
+    cout << "Entering gameplay..." << endl;
+
+    this_thread::sleep_for(chrono::seconds(5));
+
+    system("CLS");
+}
+
+// Function to check for a winner
+void checkForWinner() {
+    for (const Players& progress : playersData) {
+        if (progress.getProgress() == 100) {
+            cout << progress.getName() << " is the winner!" << endl;
+            // End the game properly
+            gameEnded = true;
+            return; // Exit the function when a winner is found
+        }
+    }
+}
+
+void checkForWinnerPeriodically() {
+    while (!gameEnded) {
+        checkForWinner();
+        this_thread::sleep_for(chrono::seconds(5));
+    }
+}
+
+// Main game logic
+void testing() {
+    string name1;
+
+    //Creeating the instances
+
+    cout << "Enter the name for your character: ";
+    getline(cin, name1);
+
+    Players player1(name1);
+    Players player2("Abdullah");
+    Players player3("N");
+    Players player4("Camu");
+
+    //Intro
+    system("cls");
+    int Intro = 0;
+    char Intro1;
+    do {
+        cout << "A sick-minded King has taken you and 3 other prisoners into an underground dungeon. ";
+        cout << "For his own entertainment, the King separated the prisoners into different parts of the ";
+        cout << "dungeon and tasked them to escape. The guard that has guided you to your place tells you, ";
+        cout << "The prisoner that manages to escape this dreadful dungeon first, is granted their freedom.";
+        cout << "The guard continues saying, “But make haste, for the King won’t wait for long”" << endl << endl;
+        cout << "Enter Z to Continue" << endl;
+        cin >> Intro1;
+        if (Intro1 == 'z' || Intro1 == 'Z') {
+            Intro++;
+        }
+        else {
+            cout << "Please Enter Z" << endl;
+            system("cls");
+        }
+    } while (Intro == 0);
+    system("cls");
+
+    //Simulating the players joining
+    loadingPlayers(player1);
+    loadingPlayers(player2);
+    loadingPlayers(player3);
+    loadingPlayers(player4);
+
+    //Having the progress of the other players
+    playersData.push_back(player1);
+    playersData.push_back(player2);
+    playersData.push_back(player3);
+    playersData.push_back(player4);
+
+    startingGame();
+
+    // Creating threads to simulate player progress
+    thread Player2Progress(simulatePlayerProgress, ref(player2));
+    thread Player3Progress(simulatePlayerProgress, ref(player3));
+    thread Player4Progress(simulatePlayerProgress, ref(player4));
+
+    //Thread for notifying
+    thread notification(notifyPlayer);
+
+    // Create a thread for checking the win condition
+    thread winnerThread(checkForWinnerPeriodically);
+
+
+    // Picking and using items
+    int option;
+    int roomOption;
+
+    string Room1 = "Starting Room (Cells)";
+    string Room2 = "Center Room (Prison)";
+    string Room3 = "Right Room (Storage)";
+    string Room4 = "Left Room (Library)";
+    string Room5 = "Top Room (Shrine)";
+    int rTracker;
+    rTracker = 1;
+    string Riddle;
+
+    system("cls");
+
+    do {
+
+        if (rTracker == 1) {
+            cout << "-------------------" << Room1 << "------------------- " << endl << endl;
+
+            cout << "Where should I look?" << endl
+                << "[1] Check the bed" << endl
+                << "[2] Inspect the sink" << endl
+                << "[3] Move Rooms" << endl;
+
+
+            cout << "Choose: ";
+            cin >> option;
+
+            if (option == 1) {
+                cout << "It is just a bed." << endl;
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 2) {
+                if (player1.useItem(1)) {
+                    cout << "You used the fishing line to pull out a small dagger." << endl << endl;
+                    player1.addItem("Small Dagger", 2);
+                }
+                else {
+                    cout << "There is something stuck in the drain, but you can’t reach it." << endl << endl;
+                }
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 3) {
+                cout << "Which room do you want to move to?" << endl
+                    << "[1] " << Room2 << endl;
+                cin >> roomOption;
+                if (roomOption == 1) {
+                    rTracker = 2;
+                    system("CLS");
+                }
+                system("CLS");
+            }
+            else {
+                cout << "Invalid input" << endl << endl;
+                system("CLS");
+            }
+        }
+        else  if (rTracker == 2) {
+            cout << "-------------------" << Room2 << "------------------- " << endl << endl;
+
+            cout << "Where should I look?" << endl
+                << "[1] Inspect Stool" << endl
+                << "[2] Check Statue of Lady Justice" << endl
+                << "[3] Inspect Guards Desk" << endl
+                << "[4] Examine Crack in Wall" << endl
+                << "[5] Move Rooms" << endl;
+
+
+            cout << "Choose: ";
+            cin >> option;
+
+            if (option == 1) {
+                cout << "Just a regular stool, does not look comfortable." << endl;
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 2) {
+                cout << "There is something on one side of the scale!" << endl;
+                player1.addItem("Fishing Line", 1);
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 3) {
+                if (player1.useItem(3)) {
+                    cout << "You unlock the desk to find another key." << endl << endl;
+                    player1.addItem("Storage Room Key", 4);
+                }
+                else {
+                    cout << "The desk of the absent guard, it is locked." << endl << endl;
+                }
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 4) {
+                cout << "Looks like there is a key stuck in the crack!" << endl;
+                player1.addItem("Guards Key", 3);
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 5) {
+                cout << "Which room do you want to move to?" << endl
+                    << "[1] " << Room1 << endl
+                    << "[2] " << Room3 << " requires a Key." << endl
+                    << "[3] " << Room4 << " requires a Key," << endl
+                    << "[4] " << Room5 << endl;
+                cin >> roomOption;
+                if (roomOption == 1) {
+                    rTracker = 1;
+                    system("CLS");
+                }
+                else if (roomOption == 2) {
+                    if (player1.useItem(4)) {
+                        rTracker = 3;
+                        system("CLS");
+                    }
+                    else { cout << "This door is locked." << endl << endl; }
+                }
+                else if (roomOption == 3) {
+                    if (player1.useItem(6)) {
+                        rTracker = 4;
+                        system("CLS");
+                    }
+                    else { cout << "This door is locked." << endl << endl; }
+                }
+                else if (roomOption == 4) {
+                    rTracker = 5;
+                    system("CLS");
+                }
+                system("CLS");
+            }
+            else {
+                cout << "Invalid input" << endl << endl;
+                system("CLS");
+            }
+        }
+        else  if (rTracker == 3) {
+            cout << "-------------------" << Room3 << "------------------- " << endl << endl;
+
+            cout << "Where should I look?" << endl
+                << "[1] Check Shelf" << endl
+                << "[2] Inspect Hanging Box" << endl
+                << "[3] Move Rooms" << endl;
+
+
+            cout << "Choose: ";
+            cin >> option;
+
+            if (option == 1) {
+                if (player1.useItem(12)) {
+                    cout << "You find a red gem on the top shelf." << endl << endl;
+                    player1.addItem("Red Gem", 5);
+                }
+                else { cout << "There is something at the top, but you cannot reach it." << endl << endl; }
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 2) {
+                if (player1.useItem(2)) {
+                    cout << "The box fell down and you've obtained the library key." << endl << endl;
+                    player1.addItem("Library Key", 6);
+                }
+                else {
+                    cout << "Looks like I'll need something to cut the rope" << endl << endl;
+                }
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 3) {
+                cout << "Which room do you want to move to?" << endl
+                    << "[1] " << Room2 << endl;
+                cin >> roomOption;
+                if (roomOption == 1) {
+                    rTracker = 2;
+                    system("CLS");
+                }
+                system("CLS");
+            }
+            else {
+                cout << "Invalid input" << endl << endl;
+                system("CLS");
+            }
+        }
+        else  if (rTracker == 4) {
+            cout << "-------------------" << Room4 << "------------------- " << endl << endl;
+
+            cout << "Where should I look?" << endl
+                << "[1] Inspect Gold Box" << endl
+                << "[2] Check Chest" << endl
+                << "[3] Look behind the counter" << endl
+                << "[4] Examine Book Shelf" << endl
+                << "[5] Move Rooms" << endl;
+
+
+            cout << "Choose: ";
+            cin >> option;
+
+            if (option == 1) {
+                if (player1.useItem(5) && player1.useItem(7)) {
+                    cout << "The box opens and reveals a Chest Key." << endl << endl;
+                    player1.addItem("Chest Key", 11);
+                }
+                else {
+                    cout << "A gold box with slots for 2 gems." << endl << endl;
+                }
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 2) {
+                if (player1.useItem(11)) {
+                    cout << "You use the Key to open the Chest, there is a riddle inside." << endl << endl;
+                    cout << "The more of this there is, the less you see. What is it?" << endl;
+                }
+                else {
+                    cout << "A chest, in a library for some reason." << endl << endl;
+                }
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 3) {
+                cout << "There is a step ladder!" << endl;
+                player1.addItem("Step Ladder", 12);
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 4) {
+                cout << "There is something stuck in between the books" << endl;
+                player1.addItem("Portrait Key", 8);
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 5) {
+                cout << "Which room do you want to move to?" << endl
+                    << "[1] " << Room2 << endl;
+                cin >> roomOption;
+                if (roomOption == 1) {
+                    rTracker = 2;
+                    system("CLS");
+                }
+                system("CLS");
+            }
+            else {
+                cout << "Invalid input" << endl << endl;
+                system("CLS");
+            }
+        }
+        else  if (rTracker == 5) {
+            cout << "-------------------" << Room5 << "------------------- " << endl << endl;
+
+            cout << "Where should I look?" << endl
+                << "[1] Inspect Statue of the King" << endl
+                << "[2] Inspect Portrait of the King" << endl
+                << "[3] Examine the Door" << endl
+                << "[4] Check the extra Throne" << endl
+                << "[5] Move Rooms" << endl;
+
+
+            cout << "Choose: ";
+            cin >> option;
+
+            if (option == 1) {
+                if (player1.useItem(12)) {
+                    cout << "The step ladder let you reach the Blue gem in the statues hand." << endl << endl;
+                    player1.addItem("Blue Gem", 7);
+                }
+                else {
+                    cout << "There is something in the statues hand, but it's too high." << endl << endl;
+                }
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 2) {
+                if (player1.useItem(8)) {
+                    cout << "You use the Key to reveal a hammer inside the portrait." << endl << endl;
+                    player1.addItem("Hammer", 9);
+                }
+                else {
+                    cout << "There is a small key hole on the side." << endl << endl;
+                }
+
+                // To check if the item was added
+                player1.displayInventory();
+
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 3) {
+                if (player1.useItem(9) && player1.useItem(10)) {
+                    cout << "You've escaped the dungeon" << endl << endl;
+
+                    player1.setProgress(100); // Set progress to 100% when a player escapes
+                    gameEnded = true; // Update the game state to end the game
+                    break;
+                }
+                else {
+                    cout << "The exit is boarded up, and has a keyhole." << endl << endl;
+                }
+            }
+            else if (option == 4) {
+                cout << "There is a compartment that needs a riddle to open it" << endl;
+
+
+                cout << endl << "Type the Answer: " << endl;
+                cin >> Riddle;
+                if (Riddle == "Darkness" || Riddle == "darkness") {
+                    cout << "That was correct!" << endl;
+                    player1.addItem("Shrine Door Key", 10);
+                }
+                else { cout << "NO! IT WAS WRONG!" << endl; }
+
+                // To check if the item was added
+                player1.displayInventory();
+                system("Pause");
+                system("CLS");
+            }
+            else if (option == 5) {
+                cout << "Which room do you want to move to?" << endl
+                    << "[1] " << Room2 << endl;
+                cin >> roomOption;
+                if (roomOption == 1) {
+                    rTracker = 2;
+                    system("CLS");
+                }
+                system("CLS");
+            }
+            else {
+                cout << "Invalid input" << endl << endl;
+                system("CLS");
+            }
+        }
+
+        checkForWinner();
+
+    } while (!gameEnded);
+
+
+    Player2Progress.join();
+    Player3Progress.join();
+    Player4Progress.join();
+
+    notification.join();
+
+    winnerThread.join();
+
+    cout << "The game has ended" << endl;
+
+
+}
+
+int main() {
+    srand(time(NULL));
+
+    testing();
+
+    return 0;
+}
